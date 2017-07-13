@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body { font: 13px Helvetica, Arial; }
+      #overlay{width: 100%; height:100%; background-color: black; position: absolute;}
+      #msg-container{margin-bottom: 75px; display: none;}
+      #typing-container{position: fixed; bottom: 50px;left:20px;}
+      #users-online{position: fixed;bottom: 50px;right:11%;}
+      form#msg-input{ padding: 3px; position: fixed; bottom: 0; width: 100%; display: none;}
+      form#msg-input input { border-style: solid; border-color: black; width: 90%; padding: 10px; margin-right: .5%; }
+      form#msg-input button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+      p, #nickname {display: inline;}
+    </style>
+
+  </head>
+  <body>
+    <div id="overlay">
+      <form style="top:50%;left:40%;position: absolute;" id="nickname-form" action="">
+        <p style="color:white;">Please enter a nickname:</p>
+        <input id="nickname" autocomplete="off" style=""/><button style="position: absolute; left: -9999px"/>
+      </form>
+    </div>
+    <div class="body-container">
+      <div id="msg-container">
+        <ul id="messages"></ul>
+      </div>
+      <span id="typing-container"></span>
+      <span id="users-online"></span>
+      <form id="msg-input" action="">
+        <input id="msg-box" autocomplete="off" /><button>Send</button>
+      </form>
+    </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+
+  <script>
+
+
+  $(function(){
+    var socket = io();
+    var isTyping = false;
+    var timeout = undefined;
+
+    $('form#msg-input').submit(function(){
+        var input = $('#msg-box').val()
+        if(input == 'whos online'){
+          socket.emit('whos online');
+        } else if(input !== ""){
+          socket.emit('chat message', input);
+          addMsg($('#msg-box').val());
+        }
+
+        $('#msg-box').val('');
+        return false;
+
+    });
+
+    $('#nickname-form').submit(function(){
+      $('#overlay').hide();
+      $('form#msg-input').show();
+      $('#msg-container').show();
+      $('.sidebar-container').show();
+      socket.emit('add user', $('#nickname').val());
+      return false;
+    });
+
+    socket.on('chat message', function(msg){
+      addMsg(msg);
+    });
+
+    socket.on('new user joins', function(msg){
+      addMsg(msg);
+    });
+
+    socket.on('is typing', function(msg){
+      $('#typing-container').text(msg);
+    });
+
+    socket.on('is not typing', function(){
+      $('#typing-container').text("");
+    });
+
+    socket.on('number of users online', function(msg){
+      $('#users-online').text(msg);
+    })
+
+    function timeoutFunction(){
+      isTyping = false;
+      socket.emit("typing", false);
+    }
+
+    $('#msg-box').keydown(function(){
+
+      if(isTyping == false){
+        isTyping = true;
+        socket.emit("typing", true)
+
+        //call timeoutFunction after 1 sec (not typing anymore)
+        timeout = setTimeout(timeoutFunction, 1000);
+      } else {
+        //still typing so reset the timer
+        clearTimeout(timeout);
+        timeout = setTimeout(timeoutFunction, 1000);
+      }
+
+    });
+
+  });
+
+  function addMsg(msg){
+    $('#messages').append($('<li>').text(msg));
+    window.scrollTo(0,document.body.scrollHeight);
+  }
+
+  </script>
+  </body>
+</html>
