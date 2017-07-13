@@ -14,7 +14,7 @@ io.on('connection', function(socket){
 		users[socket.id] = user;
 	
 		socket.broadcast.emit('new user joins', users[socket.id] + ' has connected');
-		io.emit('number of users online', 'there are ' + Object.keys(users).length + " users online");
+		io.emit('number of users online', Object.keys(users).length + " users online");
 	});
 
 	socket.on('disconnect', function(){
